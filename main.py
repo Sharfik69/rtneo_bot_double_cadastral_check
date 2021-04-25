@@ -1,63 +1,85 @@
 from openpyxl import load_workbook, Workbook
 
-name = 'Аларский синхронизированные (2)'
 
-wb = load_workbook('{}.xlsx'.format(name))
-s = wb['выгрузка']
+class Checker:
 
-wb1 = Workbook()
-ss = wb1.active
+    def __init__(self, file_name, sheet_name, kn, street_, house_, flat_):
 
-a = set()
-d = {}
+        self.wb_name = file_name.replace('.xlsx', '')
+        self.sheet_name = sheet_name
+        self.street = street_
+        self.house = house_
+        self.flat = flat_
+        self.kn = kn
+        self.answer = '{} проверка.xlsx'.format(self.wb_name)
 
-for i in range(2, 400000):
-    if s.cell(row=i, column=1).value is None:
-        break
-    kn = s.cell(row=i, column=10).value
-    if kn != None and kn[0].isdigit():
-        info = []
+        self.wb1 = Workbook()
+        self.ss = self.wb1.active
 
-        for j in range(1, 40):
-            info.append(s.cell(row=i, column=j).value)
+        self.a = set()
+        self.d = {}
 
-        if kn not in d:
-            d[kn] = []
+    def load_book(self):
+        try:
+            self.wb = load_workbook('{}.xlsx'.format(self.wb_name))
+            self.s = self.wb[self.sheet_name]
+            return True
+        except Exception:
+            return False
 
-        d[kn].append(info)
+    def check(self):
+        for i in range(2, 400000):
+            if self.s.cell(row=i, column=1).value is None:
+                break
+            kn = self.s.cell(row=i, column=self.kn + 1).value
+            if kn is not None:
+                kn = str(kn)
+            if kn is not None and kn[0].isdigit():
+                info = []
 
-row_ = 1
-ans = 0
+                for j in range(1, 40):
+                    info.append(self.s.cell(row=i, column=j).value)
 
-for kn in d:
-    if len(d[kn]) == 1:
-        continue
+                if kn not in self.d:
+                    self.d[kn] = []
 
-    street_set, house_set, apart_set = set(), set(), set()
+                self.d[kn].append(info)
 
-    for j in d[kn]:
-        street_set.add(j[4].lower().replace('-й', ''))
-        house_set.add(j[5])
-        apart_set.add(j[6])
+        row_ = 1
+        ans = 0
 
-    if len(street_set) == 1 and len(house_set) == 1 and len(apart_set) == 1:
-        continue
+        for kn in self.d:
+            if len(self.d[kn]) == 1:
+                continue
 
-    ans += 1
-    for j in range(len(d[kn])):
-        for col_ in range(len(d[kn][j])):
-            ss.cell(row=row_, column=col_ + 1).value = d[kn][j][col_]
-        row_ += 1
-    row_ += 1
+            street_set, house_set, apart_set = set(), set(), set()
 
-ss = wb1.create_sheet("список кадастров")
+            for j in self.d[kn]:
+                street_set.add(j[self.street].lower().replace('-й', ''))
+                house_set.add(j[self.house])
+                apart_set.add(j[self.flat])
 
-row_ = 1
-for i in d.keys():
-    if len(d[i]) == 1:
-        continue
-    ss.cell(row=row_, column=1).value = i
-    row_ += 1
+            if len(street_set) == 1 and len(house_set) == 1 and len(apart_set) == 1:
+                continue
 
-wb1.save('{} проверка.xlsx'.format(name))
-print(ans)
+            ans += 1
+            for j in range(len(self.d[kn])):
+                for col_ in range(len(self.d[kn][j])):
+                    self.ss.cell(row=row_, column=col_ + 1).value = self.d[kn][j][col_]
+                row_ += 1
+            row_ += 1
+
+        ss = self.wb1.create_sheet("список кадастров")
+
+        row_ = 1
+        for i in self.d.keys():
+            if len(self.d[i]) == 1:
+                continue
+            ss.cell(row=row_, column=1).value = i
+            row_ += 1
+        self.wb1.save(self.answer)
+        self.cnt = ans
+        return True
+
+    def get_file_name(self):
+        return self.answer
